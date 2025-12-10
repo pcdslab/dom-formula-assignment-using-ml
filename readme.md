@@ -190,3 +190,9 @@ logs/                            # Execution logs
 data/
 └── knn_comparison_summary.csv   # Combined comparison of all models
 ```
+
+# License and Usage Terms
+This model and associated code are released under the CC-BY-NC-ND 4.0 license and may only be used for non-commercial, academic research purposes with proper attribution. Any commercial use, sale, or other monetization of this model and its derivatives, which include models trained on outputs from the model or datasets created from the model, is prohibited and requires prior approval. If you are a commercial entity, please contact the corresponding author.
+
+# Contact
+For any additional questions or comments, contact Fahad Saeed (fsaeed@fiu.edu).
