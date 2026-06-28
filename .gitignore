@@ -1,0 +1,5 @@
+**__pycache__**
+data/synthetic_data/*
+logs/
+output/
+data/knn_comparison_summary.csv

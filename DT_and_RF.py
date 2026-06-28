@@ -6,8 +6,11 @@ from sklearn.tree import DecisionTreeRegressor
 from sklearn.ensemble import RandomForestRegressor, ExtraTreesRegressor
 from sklearn.multioutput import MultiOutputRegressor
 from sklearn.metrics import mean_absolute_error
+import joblib
+import argparse
 
 
+os.makedirs('models', exist_ok=True)
 
 ELEMENTS = ['C', 'H', 'O', 'N', 'S']
 
@@ -28,7 +31,7 @@ def _numeric_feature_columns(df):
     return df.select_dtypes(include=[np.number]).columns.tolist()
 
 
-def main(train_path='data/train.txt', test_path='data/test.txt'):
+def main(train_path='data/train.txt', test_path='data/test.txt', retrain=False):
     print('Loading', train_path)
     df_train = pd.read_csv(train_path, sep='\t')
     print('Loading', test_path)
@@ -74,15 +77,24 @@ def main(train_path='data/train.txt', test_path='data/test.txt'):
     os.makedirs('output', exist_ok=True)
 
     for name, model in regressors:
-        print(f'Training {name} to predict CHONS counts from numeric features: {num_cols}')
+        model_path = os.path.join('models', f'{name}.joblib')
 
-        # wrap linear or otherwise single-output regressors into multioutput wrapper
-        if name in ("Ridge", "ElasticNet", "AdaBoost"):
-            estimator = MultiOutputRegressor(model)
+        if os.path.exists(model_path) and not retrain:
+            print(f'Loading existing {name} model from {model_path}')
+            estimator = joblib.load(model_path)
         else:
-            estimator = model
+            print(f'Training {name} to predict CHONS counts from numeric features: {num_cols}')
 
-        estimator.fit(X_train, counts_train.values)
+            if name in ("Ridge", "ElasticNet", "AdaBoost"):
+                estimator = MultiOutputRegressor(model)
+            else:
+                estimator = model
+
+            estimator.fit(X_train, counts_train.values)
+
+            joblib.dump(estimator, model_path)
+            print(f'Saved {name} model to {model_path}')
+
         y_pred = estimator.predict(X_test)
 
         # post-process predictions to integer non-negative counts
@@ -125,5 +137,10 @@ def main(train_path='data/train.txt', test_path='data/test.txt'):
 
 
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser(description="Train and evaluate decision tree and random forest regressors for CHONS count prediction.")
+    parser.add_argument('--train', type=str, default='data/train.txt', help='Path to training data file (tab-separated)')
+    parser.add_argument('--test', type=str, default='data/test.txt', help='Path to test data file (tab-separated)')
+    parser.add_argument('--retrain', action='store_true', help='Retrain models even if they already exist')
+    args = parser.parse_args()
+    main(train_path=args.train, test_path=args.test, retrain=args.retrain)
 

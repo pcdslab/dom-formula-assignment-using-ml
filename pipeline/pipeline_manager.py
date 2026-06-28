@@ -30,11 +30,8 @@ class PipelineManager:
 
         ## if evaluation summary already exists and not force_retrain, skip
         summary_path = os.path.join(config.result_dir, "evaluation_summary_stats.csv")
-        if os.path.exists(summary_path) and not force_retrain:
-            self.logger.info(f"Existing evaluation summary found at {summary_path}, skipping pipeline run for {config.version_name}")
-            return pd.read_csv(summary_path)
         
-
+        
         try:
             all_training_sources = config.get_all_training_sources(self.config_manager.data_config)
             self.logger.info(f"Preparing training for {len(all_training_sources)} source(s)")
@@ -45,14 +42,22 @@ class PipelineManager:
                     label = self._derive_model_label(source, idx)
                     model_path = self._augment_model_path(config.model_path, label)
                     self.logger.info(f"Training individual model '{label}' from source: {source}")
-                    trainer = ModelTrainer(k_neighbors=config.k_neighbors)
+                    trainer = ModelTrainer(
+                        k_neighbors=config.k_neighbors,
+                        metric=config.metric,
+                        p=config.p if config.p is not None else 2,
+                    )
                     training_df = self.data_loader.load_training_data(source)
                     trainer.train_and_save(training_df, model_path, force_retrain=force_retrain)
                     model = trainer.load_model(model_path)
                     model_labelled_list.append((label, model))
                 predictor = MultiPredictor(model_labelled_list)
             else:
-                trainer = ModelTrainer(k_neighbors=config.k_neighbors)
+                trainer = ModelTrainer(
+                    k_neighbors=config.k_neighbors,
+                    metric=config.metric,
+                    p=config.p if config.p is not None else 2,
+                )
                 training_data = self.data_loader.load_training_data(all_training_sources)
                 trainer.train_and_save(training_data, config.model_path, force_retrain=force_retrain)
                 model = trainer.load_model(config.model_path)
@@ -215,7 +220,7 @@ def run_pipeline_from_folder(version_name, training_folder, testing_folder,
     )
 
 
-def run_main():
+def run_main(force_retrain=False):
     manager = PipelineManager()
-    results = manager.run_all_pipelines()
+    results = manager.run_all_pipelines(force_retrain=force_retrain)
     return results

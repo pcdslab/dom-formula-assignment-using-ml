@@ -26,6 +26,7 @@ class ModelTrainer:
                 metric_name = f"Minkowski (p={self.p})"
         
         self.logger.info(f"Training KNN model with k={self.k_neighbors}, metric={metric_name}...")
+        print(f"Training KNN model with k={self.k_neighbors}, metric={metric_name}...")
         
         # Prepare features and labels
         X = training_data['Mass_Daltons'].values.reshape(-1, 1).astype(float).round(5)
@@ -69,10 +70,14 @@ class ModelTrainer:
         return self.model
     
     def train_and_save(self, training_data, model_path, force_retrain=False):
+        if os.path.exists(model_path) and not force_retrain:
+            self.logger.info(f"Model already exists at {model_path}; loading without retraining")
+            self.load_model(model_path)
+            return self.model
 
-        
         self.train_model(training_data)
         self.save_model(model_path)
+        return self.model
     
     def train_multiple_models(self, separate_training_data):
         metric_name = f"{self.metric}"
@@ -162,8 +167,13 @@ class ModelTrainer:
         Train and save multiple models, with option to skip if models already exist.
 
         """
+        if not force_retrain and all(os.path.exists(path) for _, path in model_paths):
+            self.logger.info("All ensemble models already exist; loading without retraining")
+            return self.load_multiple_models(model_paths)
+
         self.train_multiple_models(separate_training_data)
         self.save_multiple_models(model_paths)
+        return self.models
     
     def get_model(self):
         """
